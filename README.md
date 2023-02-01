@@ -1,2 +1,4 @@
-# AskTheBookWeb
-AskTheBook web
+# GoServerTemplate
+
+A server in go.
+

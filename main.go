@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+
+	_ "github.com/joho/godotenv/autoload"
 )
 
 const (

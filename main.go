@@ -4,6 +4,7 @@ import (
 	"flag"
 	"io"
 	"log"
+	"log/slog"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -27,7 +28,7 @@ var sysEventChannel = make(chan sysEventMessage, 5)
 var logOutput io.Writer
 var startTime time.Time
 
-var logFileName = flag.String("log", "/tmp/askthebookweb.log", "Log file ('-' for only stderr)")
+var logFileName = flag.String("log", "/tmp/ch_registry_server.log", "Log file ('-' for only stderr)")
 
 func main() {
 	os.Setenv("TZ", "UTC")
@@ -35,7 +36,7 @@ func main() {
 	rand.Seed(startTime.UnixNano())
 
 	if runtime.GOOS == "windows" {
-		*logFileName = "c:\\temp\\equinox_server.log"
+		*logFileName = "c:\\temp\\ch_registry_server.log"
 	}
 	flag.Parse()
 
@@ -51,10 +52,16 @@ func main() {
 	}
 	log.SetOutput(logOutput)
 
-	log.Println("Starting up...")
+	slog.Info("Starting up...")
 
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, syscall.SIGINT)
+
+	err := initDb()
+	if err != nil {
+		slog.Error("Cannot open database", "err", err)
+		return
+	}
 
 	//go webServer()
 	//go infraWebServer()
@@ -69,7 +76,7 @@ func main() {
 		case msg := <-sysEventChannel:
 			switch msg.event {
 			case eventQuit:
-				log.Println("Exiting")
+				slog.Info("Exiting")
 				os.Exit(msg.idata)
 			}
 		case sig := <-sigChannel:
@@ -93,6 +100,5 @@ func main() {
 
 func printMemStats(m *runtime.MemStats) {
 	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
-	log.Printf("Alloc: %v MiB\tTotalAlloc: %v MiB\tSys: %v MiB\tNumGC: %v\tUptime: %0.1fh\n",
-		bToMB(m.Alloc), bToMB(m.TotalAlloc), bToMB(m.Sys), m.NumGC, time.Since(startTime).Hours())
+	slog.Info("Stats:", "alloc", bToMB(m.Alloc), "total_alloc", bToMB(m.TotalAlloc), "sys", bToMB(m.Sys), "num_gc", m.NumGC, "uptime_hrs", time.Since(startTime).Hours())
 }
